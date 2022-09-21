@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import axios from 'axios'
 const key = process.env.REACT_APP_WEATHER_KEY
-console.log(key)
 
 const Weather = ({latlng}) => {
   const [weather, setWeather] = useState([])
