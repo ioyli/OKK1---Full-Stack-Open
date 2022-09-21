@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import axios from 'axios'
 
 const Filter = ({value, handleChange}) => ( <div>filter: <input value={value} onChange={handleChange} /></div> )
 
@@ -16,26 +17,28 @@ const Numbers = ({filter}) => {
   return (
     <ul>
       {filter.map(person =>
-        <li key={person.key}>{person.name} {person.number}</li>)}
+        <li key={person.id}>{person.name} {person.number}</li>)}
     </ul>
   )
 }
 
 const App = () => {
-  const [persons, setPersons] = useState([
-    { name: 'Arto Hellas',
-      number: '040 123 4567',
-      key: 1 },
-    { name: 'Eda Lovelace',
-      number: '+33 5 66431010',
-      key: 2 },
-    { name: 'Daniel Abramov',
-      number: '045 690 4200',
-      key: 3 }
-  ]) 
+  const [persons, setPersons] = useState([])
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [filter, setFilter] = useState('')
+
+  const hook = () => {
+    console.log('effect')
+    axios
+    .get('http://localhost:3001/persons')
+    .then(response => {
+      console.log('promise fulfilled')
+      setPersons(response.data)
+    })
+  }
+
+  useEffect(hook, [])
 
   const addName = (event) => {
     event.preventDefault()
@@ -51,7 +54,7 @@ const App = () => {
         const newPerson = {
           name: newName,
           number: newNumber,
-          key: persons.length + 1
+          id: persons.length + 1
         }
     
         setPersons(persons.concat(newPerson))
@@ -80,6 +83,8 @@ const App = () => {
   const filterNumbers = filter === ''
   ? persons
   : persons.filter(person => person.name.toLowerCase().includes(filter.toLowerCase()))
+
+  console.log('printing', persons.length, 'persons')
 
   return (
     <div>
