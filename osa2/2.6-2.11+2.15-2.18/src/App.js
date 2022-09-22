@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import axios from 'axios'
+import personService from './services/persons'
 
 const Filter = ({value, handleChange}) => ( <div>filter: <input value={value} onChange={handleChange} /></div> )
 
@@ -13,11 +13,11 @@ const Form = ({onSubmit, newName, handleNameChange, newNumber, handleNumberChang
   )
 }
 
-const Numbers = ({filter}) => {
+const Numbers = ({filter, handler}) => {
   return (
     <ul>
       {filter.map(person =>
-        <li key={person.id}>{person.name} {person.number}</li>)}
+        <li key={person.id}>{person.name} {person.number} <button value={person.name} onClick={handler}>delete</button></li>)}
     </ul>
   )
 }
@@ -28,17 +28,16 @@ const App = () => {
   const [newNumber, setNewNumber] = useState('')
   const [filter, setFilter] = useState('')
 
+
   const hook = () => {
-    console.log('effect')
-    axios
-    .get('http://localhost:3001/persons')
-    .then(response => {
-      console.log('promise fulfilled')
-      setPersons(response.data)
+    personService
+    .getAll()
+    .then(initialPersons => {
+      setPersons(initialPersons)
     })
   }
-
   useEffect(hook, [])
+
 
   const addName = (event) => {
     event.preventDefault()
@@ -46,20 +45,37 @@ const App = () => {
 
     if (newName === '' || newNumber === '') {
       alert('Number and name are required fields')
-      
     } else {
-      if (persons.find(checkName)) {
-        alert(`${newName} is already on the phonebook`)
-      } else {
-        const newPerson = {
-          name: newName,
-          number: newNumber,
-          id: persons.length + 1
+      const newPerson = {
+        name: newName,
+        number: newNumber,
+      }
+
+      const personExists = persons.find(checkName)
+
+      if (personExists) {
+        if (newPerson.number === personExists.number) {
+          alert(`${personExists.name} is already on the phonebook.`)
+
+        } else {
+          if (window.confirm(`${newName} is already on the phonebook, replace the old number with a new one?`)) {
+            console.log(`replace number of ${newName}`)
+            
+            personService
+            .update(personExists.id, newPerson)
+            .then(returnedPerson => {
+              setPersons(persons.map(person => person.id !== personExists.id ? person : returnedPerson))
+            })
+          }
         }
-    
-        setPersons(persons.concat(newPerson))
-        setNewName('')
-        setNewNumber('')
+      } else {
+        personService
+        .create(newPerson)
+        .then(returnedPerson => {
+          setPersons(persons.concat(returnedPerson))
+          setNewName('')
+          setNewNumber('')
+        })
       }
     }
   }
@@ -68,8 +84,8 @@ const App = () => {
     return person.name === newName
   }
 
-  const handleNameChange = (event) => {
-    setNewName(event.target.value)
+  const handleNameChange = (e) => {
+    setNewName(e.target.value)
   }
 
   const handleNumberChange = (e) => {
@@ -80,11 +96,22 @@ const App = () => {
     setFilter(e.target.value)
   }
 
+  
+  const handlePersonDelete = (e) => {
+    const person = persons.find(person => person.name === e.currentTarget.value)
+    if (window.confirm(`Delete data of ${person.name}?`)) {
+      console.log(person.name, 'deleted')
+      personService
+      .deleteEntry(person.id)
+      .then(setPersons(persons.filter(p => p.id !== person.id)))
+    } else {
+      console.log(person.name, 'deletion canceled')
+    }
+  }
+
   const filterNumbers = filter === ''
   ? persons
   : persons.filter(person => person.name.toLowerCase().includes(filter.toLowerCase()))
-
-  console.log('printing', persons.length, 'persons')
 
   return (
     <div>
@@ -96,7 +123,7 @@ const App = () => {
       <Form onSubmit={addName} newName={newName} handleNameChange={handleNameChange} newNumber={newNumber} handleNumberChange={handleNumberChange} />
 
       <h2>Numbers</h2>
-      <Numbers filter={filterNumbers} />
+      <Numbers filter={filterNumbers} handler={handlePersonDelete} />
     </div>
   )
 
