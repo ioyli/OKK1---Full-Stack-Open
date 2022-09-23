@@ -1,6 +1,17 @@
 import { useEffect, useState } from 'react'
 import personService from './services/persons'
 
+const Notification = ({message}) => {
+  if (message === null) {
+    return null
+  }
+  return (
+    <div className='notification'>
+      <span className={`${message[1]}`}>{message[0]}</span>
+    </div>
+  )
+}
+
 const Filter = ({value, handleChange}) => ( <div>filter: <input value={value} onChange={handleChange} /></div> )
 
 const Form = ({onSubmit, newName, handleNameChange, newNumber, handleNumberChange}) => {
@@ -27,6 +38,7 @@ const App = () => {
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [filter, setFilter] = useState('')
+  const [notification, setNotification] = useState(null)
 
 
   const hook = () => {
@@ -37,14 +49,19 @@ const App = () => {
     })
   }
   useEffect(hook, [])
-
+  
+  const notify = (message, status) => {
+    setNotification([message, status])
+    setTimeout(() => {
+      setNotification(null)
+    }, 5000)
+  }
 
   const addName = (event) => {
     event.preventDefault()
-    console.log('Button clicked', event.target)
 
     if (newName === '' || newNumber === '') {
-      alert('Number and name are required fields')
+      notify('Number and name are required fields.', 'error')
     } else {
       const newPerson = {
         name: newName,
@@ -55,17 +72,19 @@ const App = () => {
 
       if (personExists) {
         if (newPerson.number === personExists.number) {
-          alert(`${personExists.name} is already on the phonebook.`)
+          notify(`${personExists.name} is already on the phonebook.`, 'error')
 
         } else {
           if (window.confirm(`${newName} is already on the phonebook, replace the old number with a new one?`)) {
-            console.log(`replace number of ${newName}`)
-            
             personService
             .update(personExists.id, newPerson)
             .then(returnedPerson => {
               setPersons(persons.map(person => person.id !== personExists.id ? person : returnedPerson))
             })
+            .catch(error => {
+              notify(`${newName} does not exist.`, 'error')
+            })
+            notify(`Number of ${newName} has been updated.`, 'success')
           }
         }
       } else {
@@ -76,6 +95,7 @@ const App = () => {
           setNewName('')
           setNewNumber('')
         })
+        notify(`${newName} has been added to the phonebook.`, 'success')
       }
     }
   }
@@ -100,10 +120,14 @@ const App = () => {
   const handlePersonDelete = (e) => {
     const person = persons.find(person => person.name === e.currentTarget.value)
     if (window.confirm(`Delete data of ${person.name}?`)) {
-      console.log(person.name, 'deleted')
       personService
       .deleteEntry(person.id)
+      .catch(error => {
+        notify(`${person.name} does not exist.`, 'error')
+      })
       .then(setPersons(persons.filter(p => p.id !== person.id)))
+      notify(`${person.name} has been deleted from the phonebook.`, 'success')
+      
     } else {
       console.log(person.name, 'deletion canceled')
     }
@@ -114,17 +138,24 @@ const App = () => {
   : persons.filter(person => person.name.toLowerCase().includes(filter.toLowerCase()))
 
   return (
-    <div>
+    <>
+    <Notification message={notification} />
+
+    <div className='section'>
       <h2>Phonebook</h2>
-
       <Filter value={filter} handleChange={handleFilterChange} />
+    </div>
 
+    <div className='section'>
       <h2>Add new entry</h2>
       <Form onSubmit={addName} newName={newName} handleNameChange={handleNameChange} newNumber={newNumber} handleNumberChange={handleNumberChange} />
+    </div>
 
+    <div className='section'>
       <h2>Numbers</h2>
       <Numbers filter={filterNumbers} handler={handlePersonDelete} />
     </div>
+    </>
   )
 
 }

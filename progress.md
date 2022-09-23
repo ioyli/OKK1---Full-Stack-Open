@@ -2,7 +2,7 @@ osa0 DONE
 
 osa1 DONE
 
-osa2
+osa2 DONE
 
 osa3
 
